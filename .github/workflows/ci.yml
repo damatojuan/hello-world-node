@@ -1,4 +1,4 @@
-name: Verify Node.js
+name: Verify and Deploy Node.js
 
 on:
   push:
@@ -28,3 +28,18 @@ jobs:
           trap "kill $server_pid" EXIT
           sleep 2
           curl --fail --silent http://127.0.0.1:3000/ | grep "Servidor Node.js funcionando."
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deployment
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL is not configured"
+            exit 1
+          fi
+          curl --fail --show-error --silent --request POST "$RENDER_DEPLOY_HOOK_URL"
